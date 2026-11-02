@@ -21,7 +21,7 @@ Maven 用 mvnd · 查外部行为先查文档 · 读 jar 只看 sources.jar · �
 
 | 层 | 内容 | 什么时候进上下文 |
 | --- | --- | --- |
-| 常驻注入 | `rules/compact.md`，四条硬约束，约 400 token | 每轮模型调用 |
+| 常驻注入 | `rules/compact.md`，五条硬约束，约 500 token | 每轮模型调用 |
 | skill `java-dev` | `rules/java-dev.md`，完整细则（参数表、示例、例外） | 模型判断相关时自动拉取，也可手动点名 |
 
 ## 安装
@@ -46,7 +46,21 @@ opencode plugin add opencode-agents-java-v2
 - **Maven 一律 `mvnd`**：`mvnd -o test`、`mvnd -o -DskipTests package`。项目文档里写的 `mvn ...` 执行时替换。例外是项目带 Maven Wrapper（用 `./mvnw`）、需要对照原生 Maven（用 `/usr/local/bin/mvn`）、机器没装 `mvnd`（回退 `mvn`）。
 - **查外部行为先查文档**：官方文档 → GitHub issue/PR → 最小复现实测 → 最后才是 `*-sources.jar`。
 - **读 jar 只读 `*-sources.jar`**：`unzip -p` 取单个文件；`javap` 只允许 `-public` 看签名，禁止 `javap -c` 反汇编去反推实现。
-- **长任务用 `wait_for`**：`background: true` 启动并重定向日志，然后一次阻塞等待，不搞 `sleep` 轮询。
+- **长任务不要 sleep 轮询**：`wait_for` 工具可用时用「后台启动 + 一次阻塞等待」；不可用时退化为长间隔检查，而不是每 10 秒一次。
+
+## 与其它 java-* skill 的分工
+
+本插件只管**构建与查证**：Maven/mvnd、怎么确认第三方库的真实行为、怎么读 jar、怎么等长构建。
+
+单元测试写法看 `java-junit`，Javadoc 规范看 `java-docs`，Spring Boot 用法看 `java-springboot`。skill 的 `description` 里已经写明这条边界，避免几个 skill 在同一句请求上互相抢 auto-invoke。
+
+## 装了之后建议精简 `AGENTS.md`
+
+如果你本机的 `~/.config/opencode/AGENTS.md`（或项目里的）已经写了一遍 `mvnd`、`sources.jar`、`wait_for` 的细则，**装完建议把这些章节删掉**，只留插件不覆盖的东西（语言约定、软件安装不用 brew 等）。
+
+不删的后果是每个 session 同时背着「AGENTS.md 全量 + 插件 400 token + 按需 skill」，比原来更重；而且两处规则会各自演化，迟早对不上。
+
+安全做法：先备份，再按 `rules/compact.md` 的层级对照删——细则都搬到插件里了，AGENTS.md 里只需要保留「本机特定、不适合分发」的部分。
 
 ## 改规则
 

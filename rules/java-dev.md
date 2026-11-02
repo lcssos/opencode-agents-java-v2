@@ -63,9 +63,11 @@
 
 ## 长任务与等待
 
-**禁止 `sleep N; tail ...` 这种前台轮询。** 它浪费的是双份时间：sleep 那几分钟纯白等，醒来后还要再推理一轮（本机实测这一轮 P50 约 14 秒），一条长任务往往要轮询十几次。
+**不要用 `sleep N; tail ...` 这种前台轮询。** 它浪费的是双份时间：sleep 那几分钟纯白等，醒来后还要再推理一轮（本机实测这一轮 P50 约 14 秒），一条长任务往往要轮询十几次。
 
-### 正确做法：后台启动 + `wait_for` 阻塞等待
+### 首选：后台启动 + `wait_for` 阻塞等待
+
+前提是 `wait_for` 工具可用（来自插件 `opencode-wait-for-v2`）。不确定时先看工具列表；没有就按下面「没有 wait_for 时」的做法。
 
 **第一步**，长任务用 `background: true` 启动，输出重定向到日志文件：
 
@@ -97,6 +99,14 @@ wait_for(path="/tmp/build.log", pattern="BUILD (SUCCESS|FAILURE)", timeout_ms=60
 
 - `shell` 工具的 `timeout` 参数**不可靠**（实测设定 60s 跑了 975s），需要硬时限时用系统的 `timeout` 命令，例如 `timeout 600 mvnd ...`。
 - 确实需要 sleep 时，必须是「等某个东西到来」的语义，不要 `sleep 3` 这种纯粹为了保险的空等。
+
+### 没有 `wait_for` 时
+
+那个工具来自 `opencode-wait-for-v2`，不是 OpenCode 内置。没装时不要调用它，也不要退化成每 10 秒一次的短轮询：
+
+- 用 `background: true` 启动任务并重定向日志。
+- 隔一段足够长的时间（例如以 1~2 分钟为起点）看一次日志尾部与进程状态，用 `ps -Ao pid,etime,command | grep -E '[m]vnd'` 判断还活着没有。
+- 判断标准是「日志最后一行是否在推进」，而不是「已经等了多久」。
 
 ## 语言约定
 

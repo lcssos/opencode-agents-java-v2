@@ -53,7 +53,8 @@ export default {
       editor.add({
         id: "java-dev",
         name: "Java 工程开发规则",
-        description: "写 Java、跑 Maven 构建、查第三方库行为、等待长任务或读 jar 源码时必读",
+        description:
+          "Java 构建与外部行为查证：Maven/mvnd 用法、查证优先级、读 jar sources、长任务等待。不涉及单元测试写法(JUnit)、Javadoc 规范、Spring Boot 用法，那些见 java-junit / java-docs / java-springboot",
         path: skillPath,
         content: full,
         autoinvoke: true,

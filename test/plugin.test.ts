@@ -84,6 +84,13 @@ describe("java-dev skill", () => {
     expect(skill.description).toContain("Maven")
   })
 
+  test("description 与已有 java-* skill 划清边界", () => {
+    // 本机已装 java-junit / java-docs / java-springboot，职责重叠会让 autoinvoke 互相抢
+    expect(skill.description).toContain("java-junit")
+    expect(skill.description).toContain("java-docs")
+    expect(skill.description).toContain("java-springboot")
+  })
+
   test("path 是绝对路径且指向真实文件", () => {
     expect(skill.path.startsWith("/")).toBe(true)
     expect(readFileSync(skill.path, "utf8")).toBe(skill.content)

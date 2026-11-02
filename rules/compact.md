@@ -11,6 +11,6 @@
 
 3. **读第三方 jar 只读 `*-sources.jar`**：`unzip -p "$JAR" org/.../Xxx.java`；路径不确定先 `unzip -l "$JAR" | grep -i 关键词`。`javap` 只允许 `-public` 看签名，**禁止** `javap -c` 反汇编去反推实现。目标 1~2 次工具调用解决。
 
-4. **长任务禁止 `sleep N; tail ...` 轮询**。用 `background: true` 启动并重定向到日志文件，然后一次 `wait_for(path=..., pattern="BUILD (SUCCESS|FAILURE)", timeout_ms=600000)` 阻塞等待。超时不算失败，先 `ps`/`lsof` 确认进程再决定。
+4. **长任务不要用 `sleep N; tail ...` 轮询**。若 `wait_for` 工具可用（装了 `opencode-wait-for-v2`）：用 `background: true` 启动并重定向到日志文件，再一次性 `wait_for(path=..., pattern="BUILD (SUCCESS|FAILURE)", timeout_ms=600000)` 阻塞等待；超时不算失败，先 `ps`/`lsof` 确认进程。没有 `wait_for` 时，用后台启动 + 拉长间隔的一次性检查，不要连续 `sleep` 短轮询。
 
 5. 输出用中文；代码、标识符、命令、日志、错误信息、文件路径保持原样，不做翻译。
