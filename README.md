@@ -84,9 +84,19 @@ opencode plugin add opencode-agents-java-v2
 
 脚本会：校验工作区干净且在 `main` 上 → 跑 `bun test` → 改版本 → 提交 → 打 tag → 推送。推送 tag 触发 GitHub Actions（`.github/workflows/publish.yml`），用 OIDC trusted publishing 发布到 npm，不需要任何 npm token。
 
-首次发布前需要在该包的 npm 后台配置 Trusted Publisher：GitHub 仓库 `lcssos/opencode-agents-java-v2`，workflow 文件名 `publish.yml`。
+**首次发布必须先手工做一次**。npm 的 Trusted Publisher 配置入口在「已存在的包」的设置页，包还不存在时无处配置，所以顺序只能是：
+
+1. 本地（或任意有 2FA 的机器）跑一次 `npm publish --access public` 发布 `0.1.0`。这一步走传统 2FA 认证，不用 token 文件。
+2. 包在 npm 上出现后，进 Package → Settings → Trusted publishing，填 GitHub 用户 `lcssos`、仓库 `opencode-agents-java-v2`、workflow 文件名 `publish.yml`。
+3. 之后 `./scripts/release.sh` 推的 tag 才会走 OIDC。**注意 npm 要求新配置在 2 天内完成首次成功发布，否则配置过期作废**，所以第 2、3 步最好连在一起做。
+
+`package.json` 的 `repository.url` 必须与 GitHub 仓库精确匹配，否则 OIDC 发布报 `ENEEDAUTH`。
 
 CI（`.github/workflows/ci.yml`）在 push / PR 上跑 `bun test` + `bun build` + `npm pack --dry-run`，并额外校验 `rules/*.md` 确实进了包——这一条是防止用户装完之后 skill 的 `path` 指向不存在的文件。
+
+## 关于运行环境
+
+`exports` 直接指向未编译的 `index.ts`，是 V2 插件的约定：OpenCode 用内嵌 bun 加载插件，不经过裸 Node。`engines.node >= 22.14.0` 对应的是 npm OIDC 发布的要求，不代表可以用裸 Node `import` 本包。
 
 ## 许可
 
