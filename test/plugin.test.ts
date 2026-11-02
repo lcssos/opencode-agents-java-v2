@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeAll } from "bun:test"
+import { describe, expect, test, beforeAll, afterAll } from "bun:test"
 import { readFileSync } from "node:fs"
 import plugin from "../index.ts"
 
@@ -6,6 +6,9 @@ type Hook = (event: any) => void | Promise<void>
 
 let contextHook: Hook
 let skill: any
+let cleanup: (() => unknown) | undefined
+let hookDisposed = 0
+let skillDisposed = 0
 
 beforeAll(async () => {
   const ctx = {
@@ -13,17 +16,30 @@ beforeAll(async () => {
       hook: async (name: string, cb: Hook) => {
         if (name !== "context") throw new Error(`unexpected hook: ${name}`)
         contextHook = cb
-        return { dispose: async () => {} }
+        return {
+          dispose: async () => {
+            hookDisposed++
+          },
+        }
       },
     },
     skill: {
       transform: async (cb: (editor: any) => void) => {
         cb({ add: (s: any) => (skill = s) })
-        return { dispose: async () => {} }
+        return {
+          dispose: async () => {
+            skillDisposed++
+          },
+        }
       },
     },
   }
-  await (plugin as any).setup(ctx)
+  cleanup = (await (plugin as any).setup(ctx)) as (() => unknown) | undefined
+})
+
+// cleanup 必须最后测：它会让本文件的注册失效
+afterAll(async () => {
+  await cleanup?.()
 })
 
 const makeEvent = () => ({ system: [] as any[] })
@@ -77,5 +93,18 @@ describe("java-dev skill", () => {
     const event = makeEvent()
     await contextHook(event)
     expect(skill.content.length).toBeGreaterThan(event.system[0].text.length * 2)
+  })
+})
+
+describe("热重载 cleanup", () => {
+  test("setup 返回清理函数", () => {
+    expect(typeof cleanup).toBe("function")
+  })
+
+  test("清理函数 dispose 掉 hook 与 skill 两个注册", async () => {
+    // afterAll 会再调一次，这里只要求"至少各调过一次"
+    await cleanup?.()
+    expect(hookDisposed).toBeGreaterThanOrEqual(1)
+    expect(skillDisposed).toBeGreaterThanOrEqual(1)
   })
 })

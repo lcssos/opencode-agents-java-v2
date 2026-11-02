@@ -19,24 +19,34 @@ import { fileURLToPath } from "node:url"
 
 const MARKER = "<!-- opencode-agents-java-v2:injected -->"
 
-/** 读不到就是打包漏了 rules/，直接抛错，不要静默注入空串。 */
+/**
+ * 读规则文件。放在 setup 里调用，不放在模块顶层：
+ * 模块顶层抛错会炸在整个插件加载器上（其它插件、其它项目一起受影响），
+ * 而 setup 里的失败只归本插件的这一份配置。规则文件缺失就是打包漏了 rules/，
+ * 必须抛错而不是静默注入空串——空串等于规则悄悄失效，最难查。
+ */
 function loadRule(name: string): string {
-  return readFileSync(fileURLToPath(new URL(`./rules/${name}`, import.meta.url)), "utf8")
+  const path = fileURLToPath(new URL(`./rules/${name}`, import.meta.url))
+  try {
+    return readFileSync(path, "utf8")
+  } catch (error) {
+    throw new Error(`opencode-agents-java-v2 读不到规则文件 ${path}；请确认 npm 包内含 rules/ 目录`)
+  }
 }
-
-const COMPACT = loadRule("compact.md")
-const FULL = loadRule("java-dev.md")
-const SKILL_PATH = fileURLToPath(new URL("./rules/java-dev.md", import.meta.url))
 
 export default {
   id: "agents-java",
 
   async setup(ctx: any) {
+    const compact = loadRule("compact.md")
+    const full = loadRule("java-dev.md")
+    const skillPath = fileURLToPath(new URL("./rules/java-dev.md", import.meta.url))
+
     const registration = await ctx.session.hook("context", (event: any) => {
-      // 同一 event 可能被重复调用（重试、插件热重载），按标记幂等
+      // 同一 event 可能被调用多次（插件被列两次、热重载后两个 hook 并存），按标记幂等
       const injected = event.system.some((part: any) => part.type === "text" && part.text.startsWith(MARKER))
       if (injected) return
-      event.system.push({ type: "text", text: COMPACT })
+      event.system.push({ type: "text", text: compact })
     })
 
     const skillRegistration = await ctx.skill.transform((editor: any) => {
@@ -44,15 +54,15 @@ export default {
         id: "java-dev",
         name: "Java 工程开发规则",
         description: "写 Java、跑 Maven 构建、查第三方库行为、等待长任务或读 jar 源码时必读",
-        path: SKILL_PATH,
-        content: FULL,
+        path: skillPath,
+        content: full,
         autoinvoke: true,
       })
     })
 
-    return () => {
-      void registration?.dispose?.()
-      void skillRegistration?.dispose?.()
+    return async () => {
+      await registration?.dispose?.()
+      await skillRegistration?.dispose?.()
     }
   },
 }
