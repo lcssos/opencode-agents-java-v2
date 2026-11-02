@@ -1,0 +1,41 @@
+{
+  "name": "opencode-agents-java-v2",
+  "version": "0.1.0",
+  "description": "OpenCode V2 plugin: Java 工程开发规则——mvnd 优先、文档优先查证、sources.jar 读法、wait_for 长任务等待",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "files": [
+    "index.ts",
+    "rules",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "check": "bun build index.ts --target=node --outfile=/tmp/agents-java-check.js",
+    "release": "./scripts/release.sh"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "opencode-v2",
+    "java",
+    "maven",
+    "mvnd",
+    "agents-md"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lcssos/opencode-agents-java-v2.git"
+  },
+  "homepage": "https://github.com/lcssos/opencode-agents-java-v2#readme",
+  "bugs": {
+    "url": "https://github.com/lcssos/opencode-agents-java-v2/issues"
+  }
+}
