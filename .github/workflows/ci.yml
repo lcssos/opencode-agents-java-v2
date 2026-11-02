@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 单元测试
+        run: bun test
+
+      - name: 打包校验（确认入口可被 bundler 解析）
+        run: |
+          bun build index.ts --target=node --outfile=/tmp/check.js
+          echo "构建通过，产物大小：$(wc -c </tmp/check.js) 字节"
+
+      - name: 确认必需文件都在发布清单里
+        run: |
+          bun pm pack --dry-run 2>/dev/null || npm pack --dry-run
+
+      - name: 确认 rules 进入发布清单
+        run: |
+          npm pack --dry-run --json 2>/dev/null | tail -n +1 > /tmp/pack.json
+          for f in rules/compact.md rules/java-dev.md; do
+            grep -q "\"$f\"" /tmp/pack.json || { echo "::error::$f 未进入 npm 包"; exit 1; }
+          done
+          echo "rules 已随包发布"
