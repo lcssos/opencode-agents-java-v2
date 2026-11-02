@@ -25,6 +25,8 @@ function loadRule(name: string): string {
 }
 
 const COMPACT = loadRule("compact.md")
+const FULL = loadRule("java-dev.md")
+const SKILL_PATH = fileURLToPath(new URL("./rules/java-dev.md", import.meta.url))
 
 export default {
   id: "agents-java",
@@ -37,6 +39,20 @@ export default {
       event.system.push({ type: "text", text: COMPACT })
     })
 
-    return () => void registration?.dispose?.()
+    const skillRegistration = await ctx.skill.transform((editor: any) => {
+      editor.add({
+        id: "java-dev",
+        name: "Java 工程开发规则",
+        description: "写 Java、跑 Maven 构建、查第三方库行为、等待长任务或读 jar 源码时必读",
+        path: SKILL_PATH,
+        content: FULL,
+        autoinvoke: true,
+      })
+    })
+
+    return () => {
+      void registration?.dispose?.()
+      void skillRegistration?.dispose?.()
+    }
   },
 }

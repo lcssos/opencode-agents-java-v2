@@ -1,4 +1,5 @@
 import { describe, expect, test, beforeAll } from "bun:test"
+import { readFileSync } from "node:fs"
 import plugin from "../index.ts"
 
 type Hook = (event: any) => void | Promise<void>
@@ -53,5 +54,28 @@ describe("核心条款注入", () => {
 
   test("插件 id 为 agents-java", () => {
     expect((plugin as any).id).toBe("agents-java")
+  })
+})
+
+describe("java-dev skill", () => {
+  test("已注册且可自动 invoke", () => {
+    expect(skill.id).toBe("java-dev")
+    expect(skill.autoinvoke).toBe(true)
+    expect(skill.name).toBe("Java 工程开发规则")
+  })
+
+  test("description 点明触发场景", () => {
+    expect(skill.description).toContain("Maven")
+  })
+
+  test("path 是绝对路径且指向真实文件", () => {
+    expect(skill.path.startsWith("/")).toBe(true)
+    expect(readFileSync(skill.path, "utf8")).toBe(skill.content)
+  })
+
+  test("content 比常驻注入内容长", async () => {
+    const event = makeEvent()
+    await contextHook(event)
+    expect(skill.content.length).toBeGreaterThan(event.system[0].text.length * 2)
   })
 })
